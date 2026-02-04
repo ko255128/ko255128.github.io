@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公設檢驗評選分析</title>
+    
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Google Sites iframe 滾動優化 */
+        body { margin: 0; padding: 0; background-color: #f9fafb; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- 圖示組件 (SVG) ---
+        // 為了確保在 Google Sites 不需外部依賴，直接內建 SVG
+        const Icon = ({ path, className, fill = "none" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const Shield = (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>} />;
+        const ShieldAlert = (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>} />;
+        const Award = (props) => <Icon {...props} path={<><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></>} />;
+        const CheckCircle = (props) => <Icon {...props} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>} />;
+        const TrendingUp = (props) => <Icon {...props} path={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></>} />;
+        const DollarSign = (props) => <Icon {...props} path={<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></>} />;
+        const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9" />} />;
+        const ChevronUp = (props) => <Icon {...props} path={<polyline points="18 15 12 9 6 15" />} />;
+        const Star = ({ className, fill }) => <Icon className={className} fill={fill} path={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />} />;
+        const Info = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>} />;
+        const FileText = (props) => <Icon {...props} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></>} />;
+
+        // --- 主應用程式 ---
+        const MobileComparisonDashboard = () => {
+            const [includeOptional, setIncludeOptional] = useState(false);
+            const [expandedSection, setExpandedSection] = useState('analysis');
+
+            // 數據定義
+            const sgsBasePrice = 366700;
+            const taiguBasePrice = 228000; 
+            
+            const taiguOptionalCosts = {
+                binding: 31500, 
+                plaque: 31500,  
+                elevator: 18900,
+                recheck: 50400 
+            };
+
+            const taiguFinalPrice = includeOptional 
+                ? taiguBasePrice + taiguOptionalCosts.binding + taiguOptionalCosts.plaque + taiguOptionalCosts.elevator + taiguOptionalCosts.recheck
+                : taiguBasePrice;
+
+            const priceDiff = sgsBasePrice - taiguFinalPrice;
+
+            const scores = [
+                { label: '品牌公信力', sgs: 5, taigu: 3 },
+                { label: '價格優勢', sgs: 2, taigu: includeOptional ? 2 : 5 },
+                { label: '報告法律效力', sgs: 5, taigu: 3 },
+                { label: '服務完整性', sgs: 5, taigu: includeOptional ? 4.5 : 2 },
+            ];
+
+            const renderStars = (count, color) => {
+                return (
+                <div className="flex space-x-0.5">
+                    {[...Array(5)].map((_, i) => (
+                    <Star 
+                        key={i} 
+                        className={`w-3 h-3 ${i < count ? `text-${color.split('-')[1]}-500` : 'text-gray-200'}`} 
+                        fill={i < count ? "currentColor" : "none"}
+                    />
+                    ))}
+                </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 pb-40 font-sans text-slate-800">
+                
+                {/* Mobile Header */}
+                <div className="bg-white px-4 py-4 shadow-sm sticky top-0 z-10 flex justify-between items-center">
+                    <div>
+                    <h1 className="text-lg font-bold text-slate-900">公設檢驗評選</h1>
+                    <p className="text-xs text-slate-500">SGS vs. 太古全方位</p>
+                    </div>
+                    <div className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded">
+                    管委會專用
+                    </div>
+                </div>
+
+                {/* Control Tabs */}
+                <div className="p-4">
+                    <div className="bg-white rounded-lg p-1 shadow-sm flex border border-slate-200">
+                    <button 
+                        onClick={() => setIncludeOptional(false)}
+                        className={`flex-1 py-2 text-xs font-bold rounded transition-all ${!includeOptional ? 'bg-slate-800 text-white shadow' : 'text-slate-500'}`}
+                    >
+                        基礎報價單
+                    </button>
+                    <button 
+                        onClick={() => setIncludeOptional(true)}
+                        className={`flex-1 py-2 text-xs font-bold rounded transition-all ${includeOptional ? 'bg-orange-500 text-white shadow' : 'text-slate-500'}`}
+                    >
+                        含必要隱藏成本
+                    </button>
+                    </div>
+                    {includeOptional && (
+                    <div className="mt-2 text-[10px] text-center text-orange-600 bg-orange-50 py-1 rounded">
+                        已加入：複驗費、電梯檢測、認證牌、報告書
+                    </div>
+                    )}
+                </div>
+
+                {/* Main Price Comparison Cards */}
+                <div className="px-4 space-y-4">
+                    
+                    {/* SGS Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                        推薦方案
+                    </div>
+                    <div className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Shield className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-bold text-slate-900">SGS 台檢工業</h2>
+                            <div className="text-xs text-slate-500">國際第三方權威</div>
+                        </div>
+                        </div>
+                        
+                        <div className="flex items-end gap-2 mb-3">
+                        <span className="text-2xl font-bold text-blue-900">
+                            ${(sgsBasePrice/10000).toFixed(1)}萬
+                        </span>
+                        <span className="text-xs text-slate-400 mb-1">含稅總價</span>
+                        </div>
+
+                        <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-blue-600 mt-0.5" />
+                            <p className="text-xs text-blue-800">
+                            <span className="font-bold">全包式服務：</span><br/>含1次複驗 + 2部電梯檢測
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-blue-600 mt-0.5" />
+                            <p className="text-xs text-blue-800">
+                            <span className="font-bold">認證價值：</span><br/>嚴格標準核發標章，保值性高
+                            </p>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    {/* Taigu Card */}
+                    <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${includeOptional ? 'border-orange-200' : 'border-slate-200'}`}>
+                    <div className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+                            <Award className="w-6 h-6 text-orange-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-bold text-slate-900">太古全方位</h2>
+                            <div className="text-xs text-slate-500">國內檢測公司</div>
+                        </div>
+                        </div>
+
+                        <div className="flex items-end gap-2 mb-3">
+                        <span className={`text-2xl font-bold ${includeOptional ? 'text-orange-700' : 'text-slate-700'}`}>
+                            ${(taiguFinalPrice/10000).toFixed(1)}萬
+                        </span>
+                        <span className="text-xs text-slate-400 mb-1">含稅總價</span>
+                        </div>
+
+                        {/* Dynamic Content based on toggle */}
+                        <div className={`${includeOptional ? 'bg-orange-50' : 'bg-slate-50'} rounded-lg p-3 transition-colors`}>
+                        {includeOptional ? (
+                            <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                                <CheckCircle className="w-3.5 h-3.5 text-orange-600 mt-0.5" />
+                                <p className="text-xs text-orange-800">
+                                <span className="font-bold">已補齊規格：</span><br/>
+                                加購電梯$1.9萬、複驗$5萬、證書
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <Info className="w-3.5 h-3.5 text-orange-600 mt-0.5" />
+                                <p className="text-xs text-orange-800">
+                                價格優勢僅剩 $6,400 元
+                                </p>
+                            </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                                <DollarSign className="w-3.5 h-3.5 text-green-600 mt-0.5" />
+                                <p className="text-xs text-slate-700">
+                                帳面便宜約 13.8 萬
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <ShieldAlert className="w-3.5 h-3.5 text-red-500 mt-0.5" />
+                                <p className="text-xs text-red-600 font-bold">
+                                風險提示：<span className="font-normal">未含電梯與複驗費用，後續追加預算機率高。</span>
+                                </p>
+                            </div>
+                            </div>
+                        )}
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                {/* Analysis Section (Scores) */}
+                <div className="px-4 mt-6">
+                    <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    綜合評分比較
+                    </h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 space-y-4">
+                    {scores.map((item, idx) => (
+                        <div key={idx} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-600">{item.label}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* SGS Score */}
+                            <div className="bg-blue-50/50 p-2 rounded flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-blue-700">SGS</span>
+                            {renderStars(item.sgs, 'text-blue-500')}
+                            </div>
+                            {/* Taigu Score */}
+                            <div className="bg-orange-50/50 p-2 rounded flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-orange-700">太古</span>
+                            {renderStars(item.taigu, 'text-orange-500')}
+                            </div>
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+                </div>
+
+                {/* Detailed Comparison Dropdown */}
+                <div className="px-4 mt-6">
+                    <button 
+                    onClick={() => setExpandedSection(expandedSection === 'details' ? null : 'details')}
+                    className="w-full flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+                    >
+                    <span className="text-sm font-bold text-slate-800">查看詳細規格差異</span>
+                    {expandedSection === 'details' ? <ChevronUp className="w-4 h-4 text-slate-400"/> : <ChevronDown className="w-4 h-4 text-slate-400"/>}
+                    </button>
+                    
+                    {expandedSection === 'details' && (
+                    <div className="mt-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden text-xs">
+                        <div className="grid grid-cols-3 bg-slate-50 p-3 font-bold text-slate-600 border-b border-slate-200">
+                        <div>項目</div>
+                        <div className="text-blue-600 text-center">SGS</div>
+                        <div className="text-orange-600 text-center">太古</div>
+                        </div>
+                        {/* Rows */}
+                        <div className="divide-y divide-slate-100">
+                        <div className="grid grid-cols-3 p-3 items-center">
+                            <div className="font-medium text-slate-700">電梯檢測</div>
+                            <div className="text-center text-green-600 font-bold">內含</div>
+                            <div className="text-center text-slate-500">+$1.9萬</div>
+                        </div>
+                        <div className="grid grid-cols-3 p-3 items-center">
+                            <div className="font-medium text-slate-700">複驗機制</div>
+                            <div className="text-center text-green-600 font-bold">內含1次</div>
+                            <div className="text-center text-slate-500">+$5萬</div>
+                        </div>
+                        <div className="grid grid-cols-3 p-3 items-center">
+                            <div className="font-medium text-slate-700">認證牌</div>
+                            <div className="text-center text-green-600 font-bold">達標核發</div>
+                            <div className="text-center text-slate-500">+$3.1萬</div>
+                        </div>
+                        <div className="grid grid-cols-3 p-3 items-center">
+                            <div className="font-medium text-slate-700">報告書</div>
+                            <div className="text-center text-green-600 font-bold">標準</div>
+                            <div className="text-center text-slate-500">+$3.1萬</div>
+                        </div>
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+                {/* Conclusion Card */}
+                <div className="px-4 mt-6">
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-lg p-5 text-white">
+                    <div className="flex items-center mb-3">
+                        <FileText className="w-5 h-5 mr-2" />
+                        <h3 className="text-lg font-bold">管委會最終建議</h3>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                        <h4 className="font-bold text-yellow-300 text-sm mb-1">破解價格迷思</h4>
+                        <p className="text-xs leading-relaxed opacity-90">
+                            太古報價單看似便宜 13.8 萬，但實際上未含「複驗、電梯、認證牌」。一旦補齊這些必要項目，雙方總價差異僅剩 <span className="font-bold text-white underline decoration-yellow-400 decoration-2">6,400 元</span>。
+                        </p>
+                        </div>
+
+                        <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                        <h4 className="font-bold text-yellow-300 text-sm mb-1">為何選擇 SGS？</h4>
+                        <ul className="list-disc list-inside text-xs space-y-1 opacity-90">
+                            <li><span className="font-bold text-white">談判籌碼：</span>SGS 報告在與建商公設點交時，具備更強的法律與談判效力。</li>
+                            <li><span className="font-bold text-white">資產保值：</span>SGS 的國際認證標章能直接提升社區形象與房價支撐性。</li>
+                        </ul>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/20 text-center">
+                        <p className="text-sm font-bold text-white">
+                            結論：建議優先選擇 SGS
+                        </p>
+                        <p className="text-[10px] opacity-75">以極小的價差，換取最大的資產保障</p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                {/* Sticky Bottom Summary Bar */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg p-4 pb-6 z-50">
+                    <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-slate-500">SGS 與太古 價差</span>
+                    <span className={`text-xl font-bold ${priceDiff < 10000 ? 'text-green-600' : 'text-slate-800'}`}>
+                        ${priceDiff.toLocaleString()}
+                    </span>
+                    </div>
+                    
+                    {includeOptional ? (
+                    <div className="text-xs text-green-700 bg-green-50 p-2 rounded text-center font-bold">
+                        差距僅 6千元，強烈建議選擇 SGS
+                    </div>
+                    ) : (
+                    <button 
+                        onClick={() => setIncludeOptional(true)}
+                        className="w-full bg-slate-900 text-white text-xs py-3 rounded-lg font-bold flex justify-center items-center"
+                    >
+                        點擊查看真實成本 (含複驗/電梯)
+                    </button>
+                    )}
+                </div>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MobileComparisonDashboard />);
+    </script>
+</body>
+</html>
